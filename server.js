@@ -70,6 +70,27 @@ app.route('/api/shorturl/new').post(function(req, res){
 });
 
 
+app.route('/api/shorturl/new/:data_string?').get(function(req, res){
+  
+  var shortUrl = req.path.replace("/api/shorturl/new/", "");
+  var query = URL.findOne({short: shortUrl});
+  
+
+  query.then(function(doc){
+
+    if (!doc) {
+      res.json({"message": "no url with this short url exists yet"});
+    }
+    else{
+      //console.log(doc.original);
+      res.redirect(doc.original);
+      //res.json({"original-url": doc.original, "short-url": doc.short});
+    }
+
+  });
+  
+});
+
 
 app.listen(port, function () {
   console.log('Node.js listening ...');
