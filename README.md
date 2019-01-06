@@ -14,8 +14,8 @@ POST [project_url]/api/shorturl/new - body (urlencoded) :  url=https://www.googl
 
 #### Usage:
 
-https://api-uziel-url-shortener.glitch.me/api/shorturl/3
+https://api-uziel-url-shortener.glitch.me/api/shorturl/new/2
 
 #### Will redirect to:
 
-http://forum.freecodecamp.com
+https://www.raphaeluziel.com
