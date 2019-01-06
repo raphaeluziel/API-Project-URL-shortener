@@ -12,8 +12,6 @@ var app = express();
 // Basic Configuration 
 var port = process.env.PORT || 3000;
 
-// Not sure but I added this:
-const assert = require('assert');
 
 /** this project needs a db !! **/ 
 // mongoose.connect(process.env.MONGOLAB_URI);
@@ -41,50 +39,34 @@ var url = new Schema({
 
 var URL = mongoose.model('URL', url);
 
-
 app.route('/api/shorturl/new').post(function(req, res){
   
-  URL.findOne({original: req.body.url}, function(err, data){
+  var query = URL.findOne({original: req.body.url});
+  
+  query.then(function(doc){
     
-    if(data == null) {
-      
-      console.log('none found');
-      
-
-        console.log('entering chain');
-        var x = URL.find({})
-        .sort({short: -1})
-        .limit(1)
-        .exec(function(err, dataP, next){
-          if (err) return console.log('ERROR ON CHAIN')
-          console.log('the answer is: ', dataP[0].short);
-        });
+    if (!doc) {
+      var findHighestIndex = URL.find({}).sort({short: -1}).limit(1);
+      findHighestIndex.then(function(doc){
+        if (!doc[0]) {
+          var newUrl = new URL({original: req.body.url, short: 1});
+          newUrl.save().then(function(doc){
+            res.json({"original-url": req.body.url, "short-url": 1});
+          });
+        }
+        else{
+          var newUrl = new URL({original:req.body.url, short: doc[0].short + 1});
+          newUrl.save().then(function(doc){
+            res.json({"original-url": req.body.url, "short-url": doc.short});
+          });
+        }
         
-      
-      var newRecord = new URL({
-        original: req.body.url,
-        short: 200001
       });
-      
-      console.log(newRecord, 'need to create one');
-      
-      newRecord.save(function(err, doc){
-        if (err) return console.log('ERROR');
-        console.log('creating a new record with: ', doc.original);
-        res.json({"Original_URL": doc.original, "Short_URL": doc.short});
-      });     
-      
     }
-    
     else{
-      console.log('found it');
-      res.json({"Original_URL": data.original, "Short_URL": data.short});
+      res.json({"original-url": doc.original, "short-url": doc.short});
     }
-
-    
   });
-  
-  
 });
 
 
