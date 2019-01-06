@@ -40,7 +40,6 @@ var url = new Schema({
 });
 
 var URL = mongoose.model('URL', url);
-var i = 0;
 
 
 app.route('/api/shorturl/new').post(function(req, res){
@@ -51,16 +50,23 @@ app.route('/api/shorturl/new').post(function(req, res){
       
       console.log('none found');
       
-      i += 1000;
+
+        console.log('entering chain');
+        var x = URL.find({})
+        .sort({short: -1})
+        .limit(1)
+        .exec(function(err, dataP, next){
+          if (err) return console.log('ERROR ON CHAIN')
+          console.log('the answer is: ', dataP[0].short);
+        });
+        
       
       var newRecord = new URL({
         original: req.body.url,
-        short: i
+        short: 200001
       });
       
-      console.log(newRecord);
-      
-      console.log('need to create one');
+      console.log(newRecord, 'need to create one');
       
       newRecord.save(function(err, doc){
         if (err) return console.log('ERROR');
