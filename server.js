@@ -7,6 +7,9 @@ var bodyParser = require('body-parser');
 
 var cors = require('cors');
 
+const url = require('url');
+const dns = require('dns');
+
 var app = express();
 
 // Basic Configuration 
@@ -14,8 +17,10 @@ var port = process.env.PORT || 3000;
 
 
 /** this project needs a db !! **/ 
-// mongoose.connect(process.env.MONGOLAB_URI);
 mongoose.connect(process.env.MONGO_URI, { useMongoClient: true });
+
+// mongoose promise library
+mongoose.Promise = global.Promise;
 
 app.use(cors());
 
@@ -32,30 +37,45 @@ app.get('/', function(req, res){
 
 var Schema = mongoose.Schema;
 
-var url = new Schema({
+var urlSchema = new Schema({
   original: {type: String, required: true},
   short: {type: Number, unique: true}
 });
 
-var URL = mongoose.model('URL', url);
+var urlModel = mongoose.model('urlModel', urlSchema);
 
 app.route('/api/shorturl/new').post(function(req, res){
   
-  var query = URL.findOne({original: req.body.url});
+  try {
+    var sentUrl = new URL(req.body.url);
+  }
+  catch(error) {
+    console.error('no');
+    res.json({"message": "not a valid address"});
+  }
+  
+  
+  var sentUrlHost = sentUrl.host;
+
+  dns.lookup(sentUrlHost, function(err, address, family){
+    err ? console.log(err.code) : console.log("address: ", sentUrlHost,"ip: ", address, "type: ", family);
+  });
+  
+  var query = urlModel.findOne({original: req.body.url});
   
   query.then(function(doc){
     
     if (!doc) {
-      var findHighestIndex = URL.find({}).sort({short: -1}).limit(1);
+      var findHighestIndex = urlModel.find({}).sort({short: -1}).limit(1);
       findHighestIndex.then(function(doc){
         if (!doc[0]) {
-          var newUrl = new URL({original: req.body.url, short: 1});
+          var newUrl = new urlModel({original: req.body.url, short: 1});
           newUrl.save().then(function(doc){
             res.json({"original-url": req.body.url, "short-url": 1});
           });
         }
         else{
-          var newUrl = new URL({original:req.body.url, short: doc[0].short + 1});
+          var newUrl = new urlModel({original:req.body.url, short: doc[0].short + 1});
           newUrl.save().then(function(doc){
             res.json({"original-url": req.body.url, "short-url": doc.short});
           });
@@ -73,7 +93,7 @@ app.route('/api/shorturl/new').post(function(req, res){
 app.route('/api/shorturl/new/:data_string?').get(function(req, res){
   
   var shortUrl = req.path.replace("/api/shorturl/new/", "");
-  var query = URL.findOne({short: shortUrl});
+  var query = urlModel.findOne({short: shortUrl});
   
 
   query.then(function(doc){
@@ -82,9 +102,7 @@ app.route('/api/shorturl/new/:data_string?').get(function(req, res){
       res.json({"message": "no url with this short url exists yet"});
     }
     else{
-      //console.log(doc.original);
       res.redirect(doc.original);
-      //res.json({"original-url": doc.original, "short-url": doc.short});
     }
 
   });
