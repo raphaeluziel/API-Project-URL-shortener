@@ -45,42 +45,24 @@ var urlSchema = new Schema({
 var urlModel = mongoose.model('urlModel', urlSchema);
 
 app.route('/api/shorturl/new').post(function(req, res){
+  
+  var host = req.body.url.replace(/^https:\/\//, "").replace(/http:\/\//, "");
 
-  var checkHost = function(sentUrl){
-    try {
-      var sentUrlHost = sentUrl.host;
-      checkDNS(sentUrlHost);
-    }
-    catch(error) {
-      console.error('not a valid host');
-      
-      //res.json({"message": "not a valid host"});
-    }
-  };
+  dns.lookup(host, function(error, ipaddress, ipfamily){
+      console.log("ipaddress: ", ipaddress);
+      console.log("family: ", ipfamily);
+      if(error){
+        console.log("error: ", error.code);
+        res.json({"message": "url not found"});
+      }
+      else{
+        
+        doIt();
+      }
+    });
   
-  var checkDNS = function(sentUrlHost){
-    try{
-      dns.lookup(sentUrlHost, function(err, address, family){
-        console.log("address: ", sentUrlHost,"ip: ", address, "type: ", family);
-        if (address === null) {res.json({"message": "NO IP ADDRESS"})}
-        else{console.log("ALL GOOD")}
-      });
-    }
-    catch(error) {
-      console.error('DNS lookup failed', error.code);
-      res.json({"message": "website does not exist"});
-    }
-  };
   
-  try {
-    var sentUrl = new URL(req.body.url);
-    checkHost(sentUrl);
-  }
-    catch(error) {
-    console.error('not a valid url');
-    //res.json({"message": "not a valid url"});
-  }
-    
+var doIt = function(){
   var query = urlModel.findOne({original: req.body.url});
   
   query.then(function(doc){
@@ -107,6 +89,8 @@ app.route('/api/shorturl/new').post(function(req, res){
       res.json({"original-url": doc.original, "short-url": doc.short});
     }
   });
+}
+
 });
 
 
