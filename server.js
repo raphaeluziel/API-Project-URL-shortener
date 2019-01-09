@@ -7,7 +7,6 @@ var bodyParser = require('body-parser');
 
 var cors = require('cors');
 
-const url = require('url');
 const dns = require('dns');
 
 var app = express();
@@ -39,6 +38,7 @@ var Schema = mongoose.Schema;
 
 var urlSchema = new Schema({
   original: {type: String, required: true},
+  ipaddress: {type: String, unique: true},
   short: {type: Number, unique: true}
 });
 
@@ -46,23 +46,27 @@ var urlModel = mongoose.model('urlModel', urlSchema);
 
 app.route('/api/shorturl/new').post(function(req, res){
   
-  var host = req.body.url.replace(/^https:\/\//, "").replace(/http:\/\//, "");
+  var host = req.body.url;
+  
+  if((host.search(/http:\/\/\:/) < 0) && (host.search(/https:\/\/\:/) < 0) && (host.search(/www\./) < 0)){
+    res.json({"error": "invalid URL"});
+  }
+  else{
+    var host = host.replace(/^https:\/\//, "").replace(/http:\/\//, "");
 
-  dns.lookup(host, function(error, ipaddress, ipfamily){
-      console.log("ipaddress: ", ipaddress);
-      console.log("family: ", ipfamily);
-      if(error){
-        console.log("error: ", error.code);
-        res.json({"message": "url not found"});
-      }
-      else{
-        
-        doIt();
-      }
-    });
-  
-  
-var doIt = function(){
+    dns.lookup(host, function(error, ipaddress, ipfamily){
+        console.log("ipaddress: ", ipaddress);
+        console.log("family: ", ipfamily);
+        if(error){
+          res.json({"error": "URL not found"});
+        }
+        else{
+          doIt(ipaddress);
+        }
+      });
+  }
+
+var doIt = function(ipaddress){
   var query = urlModel.findOne({original: req.body.url});
   
   query.then(function(doc){
